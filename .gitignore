@@ -105,4 +105,5 @@ venv.bak/
 .mypy_cache/
 
 # Project specific
+.idea
 config.yml
