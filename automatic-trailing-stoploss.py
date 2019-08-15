@@ -86,10 +86,10 @@ try:
                     STOPLOSS_LIMIT = POS_BUY_PRICE - (POS_BUY_PRICE * STOPLOSS_PERCENTAGE / 100)
 
                 # Recalculate the net
-                net = (POS_AMOUNT * _LAST_TICKER_VALUE) - (POS_AMOUNT * POS_BUY_PRICE)
+                    expected_net = (POS_AMOUNT * _LAST_TICKER_VALUE) - (POS_AMOUNT * POS_BUY_PRICE)
                 db.positions.update_one({'_id': position.get('_id')}, {'$set': {'stop_loss': STOPLOSS_LIMIT,
                                                                                 'stop_profit': STOPGAIN_LIMIT,
-                                                                                'expected_net': net}})
+                                                                                'expected_net': expected_net}})
                 print(" > %s-%s Last:%s, Stop loss @%s, Stop gain @%s" % (
                     POS_BASE_CURRENCY, POS_CURRENCY, _LAST_TICKER_VALUE, STOPLOSS_LIMIT, STOPGAIN_LIMIT))
 
@@ -102,9 +102,9 @@ try:
 
                 # Get the hell out of here, we closed the position
                 if closure_reason is not None:
-                    print(" > Closing position %s-%s %s@%s on %s @%s, net:%s" % (
+                    print(" > Closing position %s-%s %s@%s on %s @%s, expected_net:%s" % (
                         POS_BASE_CURRENCY, POS_CURRENCY, POS_AMOUNT, POS_BUY_PRICE,
-                        closure_reason, _LAST_TICKER_VALUE, net))
+                        closure_reason, _LAST_TICKER_VALUE, expected_net))
 
                     r = api.sell_limit("%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY),
                                        quantity=POS_AMOUNT, rate=_LAST_TICKER_VALUE)
@@ -119,7 +119,6 @@ try:
                             'closure_reason': closure_reason,
                             'close_rate': _LAST_TICKER_VALUE,
                             'closed_at': dt.datetime.utcnow(),
-                            'net': net,
                         }})
                     continue
             except Exception as e:
