@@ -13,6 +13,8 @@ parser.add_argument('--stop-loss-percent', type=float, required=False, default=1
                     help='Percentage of value decrease to trigger a stoploss action')
 parser.add_argument('--stop-profit-percent', type=float, required=False, default=20,
                     help='Percentage of value increase to trigger a stopprofit action')
+parser.add_argument('--config', type=str, required=False, default="config.yml",
+                    help='Config file')
 
 args = parser.parse_args()
 

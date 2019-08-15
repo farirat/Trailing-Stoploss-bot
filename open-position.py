@@ -14,6 +14,8 @@ parser.add_argument('--market-currency', type=str, required=True,
                     help='Market base (ex: BTC for market USD-BTC)')
 parser.add_argument('--total', type=float, required=True,
                     help='Total amount to pay in marker-base currency')
+parser.add_argument('--config', type=str, required=False, default="config.yml",
+                    help='Config file')
 
 args = parser.parse_args()
 
