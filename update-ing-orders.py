@@ -2,7 +2,6 @@
 """
 import yaml
 import argparse
-import datetime as dt
 import time
 from pymongo import MongoClient
 from bittrex.bittrex import Bittrex, API_V2_0, API_V1_1
@@ -65,11 +64,26 @@ try:
                             'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0)
                         }})
 
-                    # If we're closing then update the net
                     if order_type == 'LIMIT_SELL':
+                        # If we're closing then update the net
+                        _close_cost_proceeds = r.get('result', {}).get('Price', 0) - \
+                                               r.get('result', {}).get('CommissionPaid', 0)
                         db.positions.update_one({'_id': position.get('_id')}, {
                             '$set': {
-                                'net': 0,
+                                'close_commission': r.get('result', {}).get('CommissionPaid', 0),
+                                'close_cost': r.get('result', {}).get('Price', 0),
+                                'close_cost_proceeds': _close_cost_proceeds,
+                                'net': _close_cost_proceeds - position.get('open_cost_proceeds', 0),
+                            }})
+                    else:
+                        # If we're opening then update the open_costs
+                        _open_cost_proceeds = r.get('result', {}).get('Price', 0) - \
+                                              r.get('result', {}).get('CommissionPaid', 0)
+                        db.positions.update_one({'_id': position.get('_id')}, {
+                            '$set': {
+                                'open_commission': r.get('result', {}).get('CommissionPaid', 0),
+                                'open_cost': r.get('result', {}).get('Price', 0),
+                                'open_cost_proceeds': _open_cost_proceeds,
                             }})
 
                     print(" > Order completed")
