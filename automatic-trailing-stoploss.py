@@ -86,7 +86,7 @@ try:
                     STOPLOSS_LIMIT = POS_BUY_PRICE - (POS_BUY_PRICE * STOPLOSS_PERCENTAGE / 100)
 
                 # Recalculate the net
-                    expected_net = (POS_AMOUNT * _LAST_TICKER_VALUE) - (POS_AMOUNT * POS_BUY_PRICE)
+                expected_net = (POS_AMOUNT * _LAST_TICKER_VALUE) - (POS_AMOUNT * POS_BUY_PRICE)
                 db.positions.update_one({'_id': position.get('_id')}, {'$set': {'stop_loss': STOPLOSS_LIMIT,
                                                                                 'stop_profit': STOPGAIN_LIMIT,
                                                                                 'expected_net': expected_net}})
