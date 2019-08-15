@@ -1,0 +1,6 @@
+# MongoDB connection
+db: "mongodb://localhost:27017/"
+
+# Broker configuration
+bittrex_api_key: "qhsdkjqsbdjqhdbqkjsdbqksjdn"
+bittrex_api_secret: "kqjsdkqbsdkkjdbazkdnazlkdnazldk"
