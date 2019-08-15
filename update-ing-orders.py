@@ -60,7 +60,8 @@ try:
                     db.positions.update_one({'_id': position.get('_id')}, {
                         '$set': {
                             'status': 'open' if order_type == 'LIMIT_BUY' else 'closed',
-                            'paid_commission': r.get('result', {}).get('CommissionPaid', 0),
+                            'paid_commission': position.get('paid_commission', 0) +
+                                               r.get('result', {}).get('CommissionPaid', 0),
                             'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0)
                         }})
                     print(" > Order completed")
