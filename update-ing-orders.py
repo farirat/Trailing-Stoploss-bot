@@ -1,5 +1,6 @@
 """Lookup in-progress orders (opening or closing) and update their statuses in the db
 """
+import datetime as dt
 import yaml
 import argparse
 import time
@@ -70,6 +71,7 @@ try:
                                                r.get('result', {}).get('CommissionPaid', 0)
                         db.positions.update_one({'_id': position.get('_id')}, {
                             '$set': {
+                                'fully_closed_at': dt.datetime.utcnow(),
                                 'close_commission': r.get('result', {}).get('CommissionPaid', 0),
                                 'close_cost': r.get('result', {}).get('Price', 0),
                                 'close_cost_proceeds': _close_cost_proceeds,
@@ -81,6 +83,7 @@ try:
                                               r.get('result', {}).get('CommissionPaid', 0)
                         db.positions.update_one({'_id': position.get('_id')}, {
                             '$set': {
+                                'fully_open_at': dt.datetime.utcnow(),
                                 'open_commission': r.get('result', {}).get('CommissionPaid', 0),
                                 'open_cost': r.get('result', {}).get('Price', 0),
                                 'open_cost_proceeds': _open_cost_proceeds,
