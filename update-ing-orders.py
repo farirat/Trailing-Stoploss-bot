@@ -33,8 +33,8 @@ try:
     while True:
         for position in db.positions.find({"status": {"$in": ["opening", "closing"]}}):
             try:
-                print(" > %s (%s)" % (
-                    position.get('market'), position.get('status')))
+                print(" > %s %s (%s)" % (
+                    position.get('_id'), position.get('market'), position.get('status')))
 
                 # Get order_id
                 order_id = position.get('open_order_id') if position.get('status') == 'opening' \
