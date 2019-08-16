@@ -72,13 +72,16 @@ try:
                             # If we're closing then update the net
                             _close_cost_proceeds = r.get('result', {}).get('Price', 0) - \
                                                    r.get('result', {}).get('CommissionPaid', 0)
+                            _net = _close_cost_proceeds - position.get('open_cost_proceeds', 0)
+                            _net_percent = (_close_cost_proceeds * 100) / position.get('open_cost_proceeds', 0)
                             db.positions.update_one({'_id': position.get('_id')}, {
                                 '$set': {
                                     'fully_closed_at': dt.datetime.utcnow(),
                                     'close_commission': r.get('result', {}).get('CommissionPaid', 0),
                                     'close_cost': r.get('result', {}).get('Price', 0),
                                     'close_cost_proceeds': _close_cost_proceeds,
-                                    'net': _close_cost_proceeds - position.get('open_cost_proceeds', 0),
+                                    'net': _net,
+                                    'net_percent': _net_percent,
                                 }})
                         else:
                             # If we're opening then update the open_costs
