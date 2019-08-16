@@ -58,35 +58,47 @@ try:
                         }})
                 else:
                     paid_commission = position.get('paid_commission', 0) + r.get('result', {}).get('CommissionPaid', 0)
-                    db.positions.update_one({'_id': position.get('_id')}, {
-                        '$set': {
-                            'status': 'open' if order_type == 'LIMIT_BUY' else 'closed',
-                            'paid_commission': paid_commission,
-                            'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0)
-                        }})
-
-                    if order_type == 'LIMIT_SELL':
-                        # If we're closing then update the net
-                        _close_cost_proceeds = r.get('result', {}).get('Price', 0) - \
-                                               r.get('result', {}).get('CommissionPaid', 0)
+                    if not r.get('result', {}).get('CancelInitiated', False):
+                        # Order complete:
+                        #########################################
                         db.positions.update_one({'_id': position.get('_id')}, {
                             '$set': {
-                                'fully_closed_at': dt.datetime.utcnow(),
-                                'close_commission': r.get('result', {}).get('CommissionPaid', 0),
-                                'close_cost': r.get('result', {}).get('Price', 0),
-                                'close_cost_proceeds': _close_cost_proceeds,
-                                'net': _close_cost_proceeds - position.get('open_cost_proceeds', 0),
+                                'status': 'open' if order_type == 'LIMIT_BUY' else 'closed',
+                                'paid_commission': paid_commission,
+                                'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0)
                             }})
+
+                        if order_type == 'LIMIT_SELL':
+                            # If we're closing then update the net
+                            _close_cost_proceeds = r.get('result', {}).get('Price', 0) - \
+                                                   r.get('result', {}).get('CommissionPaid', 0)
+                            db.positions.update_one({'_id': position.get('_id')}, {
+                                '$set': {
+                                    'fully_closed_at': dt.datetime.utcnow(),
+                                    'close_commission': r.get('result', {}).get('CommissionPaid', 0),
+                                    'close_cost': r.get('result', {}).get('Price', 0),
+                                    'close_cost_proceeds': _close_cost_proceeds,
+                                    'net': _close_cost_proceeds - position.get('open_cost_proceeds', 0),
+                                }})
+                        else:
+                            # If we're opening then update the open_costs
+                            _open_cost_proceeds = r.get('result', {}).get('Price', 0) - \
+                                                  r.get('result', {}).get('CommissionPaid', 0)
+                            db.positions.update_one({'_id': position.get('_id')}, {
+                                '$set': {
+                                    'fully_open_at': dt.datetime.utcnow(),
+                                    'open_commission': r.get('result', {}).get('CommissionPaid', 0),
+                                    'open_cost': r.get('result', {}).get('Price', 0),
+                                    'open_cost_proceeds': _open_cost_proceeds,
+                                }})
                     else:
-                        # If we're opening then update the open_costs
-                        _open_cost_proceeds = r.get('result', {}).get('Price', 0) - \
-                                              r.get('result', {}).get('CommissionPaid', 0)
+                        # Order cancelled:
+                        #########################################
                         db.positions.update_one({'_id': position.get('_id')}, {
                             '$set': {
-                                'fully_open_at': dt.datetime.utcnow(),
-                                'open_commission': r.get('result', {}).get('CommissionPaid', 0),
-                                'open_cost': r.get('result', {}).get('Price', 0),
-                                'open_cost_proceeds': _open_cost_proceeds,
+                                'status': 'opening-cancelled' if order_type == 'LIMIT_BUY' else 'closing-cancelled',
+                                'paid_commission': paid_commission,
+                                'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0)
                             }})
 
                     print(" > Order completed")
