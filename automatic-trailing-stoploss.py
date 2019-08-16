@@ -87,7 +87,7 @@ try:
 
                 # Recalculate the net
                 expected_net = (POS_AMOUNT * _LAST_TICKER_VALUE) - (POS_AMOUNT * POS_BUY_PRICE)
-                expected_net_percent = ((POS_AMOUNT * _LAST_TICKER_VALUE) * 100) / (POS_AMOUNT * POS_BUY_PRICE)
+                expected_net_percent = (((POS_AMOUNT * _LAST_TICKER_VALUE) * 100) / (POS_AMOUNT * POS_BUY_PRICE) - 100)
                 db.positions.update_one({'_id': position.get('_id')}, {
                     '$set': {
                         'stop_loss': STOPLOSS_LIMIT,
