@@ -55,6 +55,7 @@ try:
                     db.positions.update_one({'_id': position.get('_id')}, {
                         '$set': {
                             'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0)
+                            'last_update_at': dt.datetime.utcnow(),
                         }})
                 else:
                     paid_commission = position.get('paid_commission', 0) + r.get('result', {}).get('CommissionPaid', 0)
@@ -66,6 +67,7 @@ try:
                                 'status': 'open' if order_type == 'LIMIT_BUY' else 'closed',
                                 'paid_commission': paid_commission,
                                 'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0)
+                                'last_update_at': dt.datetime.utcnow(),
                             }})
 
                         if order_type == 'LIMIT_SELL':
@@ -82,6 +84,7 @@ try:
                                     'close_cost_proceeds': _close_cost_proceeds,
                                     'net': _net,
                                     'net_percent': _net_percent,
+                                    'last_update_at': dt.datetime.utcnow(),
                                 }})
                         else:
                             # If we're opening then update the open_costs
@@ -93,6 +96,7 @@ try:
                                     'open_commission': r.get('result', {}).get('CommissionPaid', 0),
                                     'open_cost': r.get('result', {}).get('Price', 0),
                                     'open_cost_proceeds': _open_cost_proceeds,
+                                    'last_update_at': dt.datetime.utcnow(),
                                 }})
                     else:
                         # Order cancelled:
@@ -102,6 +106,7 @@ try:
                                 'status': 'opening-cancelled' if order_type == 'LIMIT_BUY' else 'closing-cancelled',
                                 'paid_commission': paid_commission,
                                 'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0)
+                                'last_update_at': dt.datetime.utcnow(),
                             }})
 
                     print(" > Order completed")

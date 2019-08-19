@@ -69,6 +69,7 @@ try:
                     '$set': {
                         'current_price': _LAST_TICKER_VALUE,
                         'price_at': dt.datetime.utcnow()
+                        'last_update_at': dt.datetime.utcnow(),
                     }})
 
                 # Recalculate the stoppers limits
@@ -98,6 +99,7 @@ try:
                         'stop_profit': STOPGAIN_LIMIT,
                         'expected_net': expected_net,
                         'expected_net_percent': expected_net_percent
+                        'last_update_at': dt.datetime.utcnow(),
                     }})
                 print(" > %s-%s Last:%s, Stop loss @%s, Stop gain @%s" % (
                     POS_BASE_CURRENCY, POS_CURRENCY, _LAST_TICKER_VALUE, STOPLOSS_LIMIT, STOPGAIN_LIMIT))
@@ -128,6 +130,7 @@ try:
                             'closure_reason': closure_reason,
                             'close_rate': _LAST_TICKER_VALUE,
                             'closed_at': dt.datetime.utcnow(),
+                            'last_update_at': dt.datetime.utcnow(),
                         }})
                     continue
             except Exception as e:

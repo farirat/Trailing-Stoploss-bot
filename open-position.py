@@ -68,7 +68,8 @@ try:
         "open_rate": _rate,
         "volume": _quantity,
         "current_price": ticker.get('Last', 0),
-        "price_at": dt.datetime.utcnow()
+        "price_at": dt.datetime.utcnow(),
+        'last_update_at': dt.datetime.utcnow(),
     }
     db.positions.insert_one(_doc)
 except Exception as e:
