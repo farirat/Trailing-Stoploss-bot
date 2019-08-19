@@ -54,7 +54,7 @@ try:
                 if r.get('result', {}).get('IsOpen', False):
                     db.positions.update_one({'_id': position.get('_id')}, {
                         '$set': {
-                            'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0)
+                            'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0),
                             'last_update_at': dt.datetime.utcnow(),
                         }})
                 else:
@@ -66,7 +66,7 @@ try:
                             '$set': {
                                 'status': 'open' if order_type == 'LIMIT_BUY' else 'closed',
                                 'paid_commission': paid_commission,
-                                'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0)
+                                'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0),
                                 'last_update_at': dt.datetime.utcnow(),
                             }})
 

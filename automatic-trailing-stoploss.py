@@ -68,7 +68,7 @@ try:
                 db.positions.update_one({'_id': position.get('_id')}, {
                     '$set': {
                         'current_price': _LAST_TICKER_VALUE,
-                        'price_at': dt.datetime.utcnow()
+                        'price_at': dt.datetime.utcnow(),
                         'last_update_at': dt.datetime.utcnow(),
                     }})
 
@@ -98,7 +98,7 @@ try:
                         'stop_loss': STOPLOSS_LIMIT,
                         'stop_profit': STOPGAIN_LIMIT,
                         'expected_net': expected_net,
-                        'expected_net_percent': expected_net_percent
+                        'expected_net_percent': expected_net_percent,
                         'last_update_at': dt.datetime.utcnow(),
                     }})
                 print(" > %s-%s Last:%s, Stop loss @%s, Stop gain @%s" % (
