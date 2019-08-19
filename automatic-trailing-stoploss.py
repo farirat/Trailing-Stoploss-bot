@@ -39,6 +39,7 @@ try:
     db = mongo.dumbot
 
     while True:
+        ticker_cache = {}
         for position in db.positions.find({"status": "open"}):
             try:
                 # Positions values
@@ -60,11 +61,14 @@ try:
                 #    continue
 
                 # Get ticker value
-                _LAST_TICKER_VALUE = api.get_ticker(
-                    "%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)).get('result', {}).get('Last', None)
-                if _LAST_TICKER_VALUE is None:
-                    print("Cannot get last ticker value for %s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY))
-                    continue
+                if "%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY) not in ticker_cache:
+                    ticker_cache["%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)] = api.get_ticker(
+                        "%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)).get('result', {}).get('Last', None)
+                    if _LAST_TICKER_VALUE is None:
+                        print("Cannot get last ticker value for %s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY))
+                        continue
+
+                _LAST_TICKER_VALUE = ticker_cache["%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)]
                 db.positions.update_one({'_id': position.get('_id')}, {
                     '$set': {
                         'current_price': _LAST_TICKER_VALUE,
