@@ -105,7 +105,7 @@ try:
                             '$set': {
                                 'status': 'opening-cancelled' if order_type == 'LIMIT_BUY' else 'closing-cancelled',
                                 'paid_commission': paid_commission,
-                                'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0)
+                                'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0),
                                 'last_update_at': dt.datetime.utcnow(),
                             }})
 
