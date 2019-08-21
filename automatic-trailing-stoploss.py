@@ -13,6 +13,8 @@ parser.add_argument('--stop-loss-percent', type=float, required=False, default=1
                     help='Percentage of value decrease to trigger a stoploss action')
 parser.add_argument('--stop-profit-percent', type=float, required=False, default=20,
                     help='Percentage of value increase to trigger a stopprofit action')
+parser.add_argument('--dry-run', action='store_true',
+                    help='If set, no sells will be placed.')
 parser.add_argument('--config', type=str, required=False, default="config.yml",
                     help='Config file')
 
@@ -20,6 +22,7 @@ args = parser.parse_args()
 
 STOPLOSS_PERCENTAGE = args.stop_loss_percent
 STOPGAIN_PERCENTAGE = args.stop_profit_percent
+DRY_RUN = args.dry_run
 
 try:
     # Load configuration
@@ -121,21 +124,24 @@ try:
                         POS_BASE_CURRENCY, POS_CURRENCY, POS_AMOUNT, POS_BUY_PRICE,
                         closure_reason, _LAST_TICKER_VALUE, expected_net))
 
-                    r = api.sell_limit("%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY),
-                                       quantity=POS_AMOUNT, rate=_LAST_TICKER_VALUE)
-                    if not r.get('success', False):
-                        raise Exception("Cannot close position: %s" % r)
+                    if not DRY_RUN:
+                        r = api.sell_limit("%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY),
+                                           quantity=POS_AMOUNT, rate=_LAST_TICKER_VALUE)
+                        if not r.get('success', False):
+                            raise Exception("Cannot close position: %s" % r)
 
-                    close_order_id = r.get('result', {}).get('uuid', None)
-                    db.positions.update_one({'_id': position.get('_id')}, {
-                        '$set': {
-                            'status': 'closing',
-                            'close_order_id': close_order_id,
-                            'closure_reason': closure_reason,
-                            'close_rate': _LAST_TICKER_VALUE,
-                            'closed_at': dt.datetime.utcnow(),
-                            'last_update_at': dt.datetime.utcnow(),
-                        }})
+                        close_order_id = r.get('result', {}).get('uuid', None)
+                        db.positions.update_one({'_id': position.get('_id')}, {
+                            '$set': {
+                                'status': 'closing',
+                                'close_order_id': close_order_id,
+                                'closure_reason': closure_reason,
+                                'close_rate': _LAST_TICKER_VALUE,
+                                'closed_at': dt.datetime.utcnow(),
+                                'last_update_at': dt.datetime.utcnow(),
+                            }})
+                    else:
+                        print(" > DRY_RUN mode: position not closed.")
                     continue
             except Exception as e:
                 print("Error in position handling: %s" % e)
