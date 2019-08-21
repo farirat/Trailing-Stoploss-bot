@@ -31,6 +31,7 @@ try:
     db = mongo.dumbot
 
     while True:
+        ticker_cache = {}
         for position in db.positions.find({"status": {"$in": ["opening", "closing"]}}):
             try:
                 print(" > %s %s (%s)" % (
@@ -50,11 +51,22 @@ try:
                 if order_type not in ['LIMIT_BUY', 'LIMIT_SELL']:
                     raise Exception("Order type rejected for this position: %s" % order_type)
 
+                # Get ticker value
+                if position.get('market') not in ticker_cache:
+                    ticker_cache[position.get('market')] = api.get_ticker(
+                        position.get('market')).get('result', {}).get('Last', None)
+                    if ticker_cache[position.get('market')] is None:
+                        print("Cannot get last ticker value for %s" % (position.get('market')))
+                        continue
+                _LAST_TICKER_VALUE = ticker_cache[position.get('market')]
+
                 # Are we still in an 'ing' status ?
                 if r.get('result', {}).get('IsOpen', False):
                     db.positions.update_one({'_id': position.get('_id')}, {
                         '$set': {
                             'remaining_volume': r.get('result', {}).get('QuantityRemaining', 0),
+                            'current_price': _LAST_TICKER_VALUE,
+                            'price_at': dt.datetime.utcnow(),
                             'last_update_at': dt.datetime.utcnow(),
                         }})
                 else:

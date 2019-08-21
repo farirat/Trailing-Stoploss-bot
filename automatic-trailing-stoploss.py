@@ -55,9 +55,6 @@ try:
                 STOPLOSS_LIMIT = position.get('stop_loss', None)
                 STOPGAIN_LIMIT = position.get('stop_profit', None)
 
-                # Misc
-                _LAST_TICKER_VALUE = POS_BUY_PRICE
-
                 #balance = api.get_balance(POS_CURRENCY).get('result', {}).get('Available', 0)
                 #if POS_AMOUNT > balance:
                 #    print("Wallet balance (%s) mismatches the POS_AMOUNT (%s)" % (balance, POS_AMOUNT))
@@ -67,11 +64,12 @@ try:
                 if "%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY) not in ticker_cache:
                     ticker_cache["%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)] = api.get_ticker(
                         "%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)).get('result', {}).get('Last', None)
-                    if _LAST_TICKER_VALUE is None:
+                    if ticker_cache["%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)] is None:
                         print("Cannot get last ticker value for %s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY))
                         continue
-
                 _LAST_TICKER_VALUE = ticker_cache["%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)]
+
+                # Update the position information
                 db.positions.update_one({'_id': position.get('_id')}, {
                     '$set': {
                         'current_price': _LAST_TICKER_VALUE,
