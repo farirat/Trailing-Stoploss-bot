@@ -91,7 +91,10 @@ try:
                         STOPLOSS_LIMIT = _sl
                 else:
                     STOPGAIN_LIMIT = POS_BUY_PRICE + (POS_BUY_PRICE * STOPGAIN_PERCENTAGE / 100)
-                    STOPLOSS_LIMIT = POS_BUY_PRICE - (POS_BUY_PRICE * STOPLOSS_PERCENTAGE / 100)
+
+                    _sl = POS_BUY_PRICE - (POS_BUY_PRICE * STOPLOSS_PERCENTAGE / 100)
+                    if STOPLOSS_LIMIT is None or _sl > STOPLOSS_LIMIT:
+                        STOPLOSS_LIMIT = _sl
 
                 # Recalculate the net
                 expected_net = (POS_AMOUNT * _LAST_TICKER_VALUE) - (POS_AMOUNT * POS_BUY_PRICE)
