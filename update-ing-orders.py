@@ -20,7 +20,7 @@ try:
     # Bittrex API
     API_KEY = config.get('bittrex_api_key', None)
     API_SECRET = config.get('bittrex_api_secret', None)
-    SLEEP_SECONDS = 180
+    SLEEP_SECONDS = 30
 
     # Initialize bittrex api
     api = Bittrex(API_KEY, API_SECRET, api_version=API_V1_1)
