@@ -11,8 +11,6 @@ from bittrex.bittrex import Bittrex, API_V2_0, API_V1_1
 parser = argparse.ArgumentParser(description='Automatic Bittrex trailing stoploss bot.')
 parser.add_argument('--stop-loss-percent', type=float, required=False, default=10,
                     help='Percentage of value decrease to trigger a stoploss action')
-parser.add_argument('--stop-profit-percent', type=float, required=False, default=20,
-                    help='Percentage of value increase to trigger a stopprofit action')
 parser.add_argument('--dry-run', action='store_true',
                     help='If set, no sells will be placed.')
 parser.add_argument('--config', type=str, required=False, default="config.yml",
@@ -21,7 +19,6 @@ parser.add_argument('--config', type=str, required=False, default="config.yml",
 args = parser.parse_args()
 
 STOPLOSS_PERCENTAGE = args.stop_loss_percent
-STOPGAIN_PERCENTAGE = args.stop_profit_percent
 DRY_RUN = args.dry_run
 
 try:
@@ -53,7 +50,6 @@ try:
 
                 # Init. stoppers configuration
                 STOPLOSS_LIMIT = position.get('stop_loss', None)
-                STOPGAIN_LIMIT = position.get('stop_profit', None)
 
                 #balance = api.get_balance(POS_CURRENCY).get('result', {}).get('Available', 0)
                 #if POS_AMOUNT > balance:
@@ -80,16 +76,11 @@ try:
                 # Recalculate the stoppers limits
                 # Where:
                 # - STOPLOSS will never get lower than previous iterations
-                # - STOPGAIN is always STOPGAIN_PERCENTAGE% more than current price
                 if _LAST_TICKER_VALUE > POS_BUY_PRICE:
-                    STOPGAIN_LIMIT = _LAST_TICKER_VALUE + (_LAST_TICKER_VALUE * STOPGAIN_PERCENTAGE / 100)
-
                     _sl = _LAST_TICKER_VALUE - (_LAST_TICKER_VALUE * STOPLOSS_PERCENTAGE / 100)
                     if STOPLOSS_LIMIT is None or _sl > STOPLOSS_LIMIT:
                         STOPLOSS_LIMIT = _sl
                 else:
-                    STOPGAIN_LIMIT = POS_BUY_PRICE + (POS_BUY_PRICE * STOPGAIN_PERCENTAGE / 100)
-
                     _sl = POS_BUY_PRICE - (POS_BUY_PRICE * STOPLOSS_PERCENTAGE / 100)
                     if STOPLOSS_LIMIT is None or _sl > STOPLOSS_LIMIT:
                         STOPLOSS_LIMIT = _sl
@@ -98,26 +89,21 @@ try:
                 expected_net = (POS_AMOUNT * _LAST_TICKER_VALUE) - (POS_AMOUNT * POS_BUY_PRICE)
                 expected_net_percent = (((POS_AMOUNT * _LAST_TICKER_VALUE) * 100) / (POS_AMOUNT * POS_BUY_PRICE)) - 100
                 stop_loss_percent = (((POS_AMOUNT * STOPLOSS_LIMIT) * 100) / (POS_AMOUNT * POS_BUY_PRICE)) - 100
-                stop_profit_percent = (((POS_AMOUNT * STOPGAIN_LIMIT) * 100) / (POS_AMOUNT * POS_BUY_PRICE)) - 100
                 db.positions.update_one({'_id': position.get('_id')}, {
                     '$set': {
                         'stop_loss_percent': stop_loss_percent,
-                        'stop_profit_percent': stop_profit_percent,
                         'stop_loss': STOPLOSS_LIMIT,
-                        'stop_profit': STOPGAIN_LIMIT,
                         'expected_net': expected_net,
                         'expected_net_percent': expected_net_percent,
                         'last_update_at': dt.datetime.utcnow(),
                     }})
-                print(" > %s-%s Last:%s, Stop loss @%s, Stop gain @%s" % (
-                    POS_BASE_CURRENCY, POS_CURRENCY, _LAST_TICKER_VALUE, STOPLOSS_LIMIT, STOPGAIN_LIMIT))
+                print(" > %s-%s Last:%s, Stop loss @%s" % (
+                    POS_BASE_CURRENCY, POS_CURRENCY, _LAST_TICKER_VALUE, STOPLOSS_LIMIT))
 
                 # If limits are defined and reached then we may close positions
                 closure_reason = None
                 if STOPLOSS_LIMIT is not None and _LAST_TICKER_VALUE <= STOPLOSS_LIMIT:
                     closure_reason = 'stoploss'
-                elif STOPGAIN_LIMIT is not None and _LAST_TICKER_VALUE >= STOPGAIN_LIMIT:
-                    closure_reason = 'stopprofit'
 
                 # Get the hell out of here, we closed the position
                 if closure_reason is not None:
