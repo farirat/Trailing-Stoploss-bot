@@ -60,11 +60,14 @@ try:
                 if "%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY) not in ticker_cache:
                     _ticker = api.get_ticker("%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY))
                     if _ticker.get('result', {}) is None:
-                        print("Cannot get last ticker value for %s-%s: %s" % (POS_BASE_CURRENCY, POS_CURRENCY, _ticker))
+                        print("Cannot get last ticker value for %s-%s: %s" % (
+                            POS_BASE_CURRENCY, POS_CURRENCY, _ticker))
                         continue
-                    ticker_cache["%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)] = _ticker.get('result', {}).get('Last', None)
+                    ticker_cache["%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)] = _ticker.get(
+                        'result', {}).get('Last', None)
                     if ticker_cache["%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)] is None:
-                        print("Cannot get last ticker value for %s-%s: %s" % (POS_BASE_CURRENCY, POS_CURRENCY, _ticker))
+                        print("Cannot get last ticker value for %s-%s: %s" % (
+                            POS_BASE_CURRENCY, POS_CURRENCY, _ticker))
                         continue
                 _LAST_TICKER_VALUE = ticker_cache["%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)]
 
