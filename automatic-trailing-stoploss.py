@@ -130,12 +130,20 @@ try:
                         closure_reason, _LAST_TICKER_VALUE, expected_net))
 
                     if not DRY_RUN:
-                        r = api.sell_limit("%s" % position.get('market'),
-                                           quantity=POS_AMOUNT, rate=_LAST_TICKER_VALUE)
-                        if not r.get('success', False):
-                            raise Exception("Cannot close position: %s" % r)
+                        if args.exchange == 'bittrex':
+                            r = api.sell_limit("%s" % position.get('market'),
+                                               quantity=POS_AMOUNT, rate=_LAST_TICKER_VALUE)
+                            if not r.get('success', False):
+                                raise Exception("Could not close position on broker: %s" % r)
+                            close_order_id = r.get('result', {}).get('uuid', None)
+                        elif args.exchange == 'binance':
+                            r = api.order_limit_sell(symbol="%s" % position.get('market'),
+                                               quantity=POS_AMOUNT, price=_LAST_TICKER_VALUE)
+                            if r.get('status', None) not in ['PARTIALLY_FILLED', 'NEW', 'FILLED'] or r.get('orderId',
+                                                                                                           None) is None:
+                                raise Exception("Could not close position on broker: %s" % r)
+                            close_order_id = r.get('orderId')
 
-                        close_order_id = r.get('result', {}).get('uuid', None)
                         db.positions.update_one({'_id': position.get('_id')}, {
                             '$set': {
                                 'status': 'closing',
