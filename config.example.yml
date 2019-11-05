@@ -4,3 +4,6 @@ db: "mongodb://localhost:27017/"
 # Broker configuration
 bittrex_api_key: "qhsdkjqsbdjqhdbqkjsdbqksjdn"
 bittrex_api_secret: "kqjsdkqbsdkkjdbazkdnazlkdnazldk"
+
+binance_api_key: "QOaIqsdqsdB158XbICjMEBclqsdqs9dR7uJZznCS5YaOy6YK1K7rLuNNR0qsdqsdjdW8BLKTqsd"
+binance_api_secret: "9apIir4peMXqN2pmpMQUpd8qsdqsdD4btyoyHSbznjQkmjAJkjQqsqsdsxZCx2vI1jV37wCj"

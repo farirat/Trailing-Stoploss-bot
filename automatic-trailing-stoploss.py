@@ -6,9 +6,15 @@ import argparse
 import datetime as dt
 import time
 from pymongo import MongoClient
+
 from bittrex.bittrex import Bittrex, API_V2_0, API_V1_1
 
-parser = argparse.ArgumentParser(description='Automatic Bittrex trailing stoploss bot.')
+from binance.client import Client as Binance
+from binance.enums import *
+
+parser = argparse.ArgumentParser(description='Automatic exchange trailing stoploss bot.')
+parser.add_argument('--exchange', choices=['bittrex', 'binance'], required=True,
+                    help='Exchange to use')
 parser.add_argument('--stop-loss-percent', type=float, required=False, default=10,
                     help='Percentage of value decrease to trigger a stoploss action')
 parser.add_argument('--dry-run', action='store_true',
@@ -25,51 +31,57 @@ try:
     # Load configuration
     config = yaml.load(open(args.config, 'r'), Loader=yaml.SafeLoader)
 
-    # Bittrex API
-    API_KEY = config.get('bittrex_api_key', None)
-    API_SECRET = config.get('bittrex_api_secret', None)
-    SLEEP_SECONDS = 5
-
-    # Initialize bittrex api
-    api = Bittrex(API_KEY, API_SECRET, api_version=API_V1_1)
-
     # Initialize mongo api
     mongo = MongoClient(config.get('db', None))
     mongo.server_info()
     db = mongo.dumbot
 
+    # Exchange API keys
+    API_KEY = config.get('%s_api_key' % args.exchange, None)
+    API_SECRET = config.get('%s_api_secret' % args.exchange, None)
+    SLEEP_SECONDS = 30
+
+    # Initialize exchange api
+    if args.exchange == 'bittrex':
+        api = Bittrex(API_KEY, API_SECRET, api_version=API_V1_1)
+    elif args.exchange == 'binance':
+        api = Binance(API_KEY, API_SECRET)
+
+        # Is binance alive ?
+        if api.get_system_status().get("status", -1) != 0:
+            raise Exception("Exchange unavailable for trading")
+    else:
+        raise NotImplementedError
+
     while True:
         ticker_cache = {}
-        for position in db.positions.find({"status": "open"}):
+        for position in db.positions.find({"$and":[
+            {"status": "open"},
+            {"broker": args.exchange}
+        ]}):
             try:
                 # Positions values
-                POS_BASE_CURRENCY = position.get('market').split('-')[0]
-                POS_CURRENCY = position.get('market').split('-')[1]
                 POS_AMOUNT = position.get('volume')
                 POS_BUY_PRICE = position.get('open_rate')
 
                 # Init. stoppers configuration
                 STOPLOSS_LIMIT = position.get('stop_loss', None)
 
-                #balance = api.get_balance(POS_CURRENCY).get('result', {}).get('Available', 0)
-                #if POS_AMOUNT > balance:
-                #    print("Wallet balance (%s) mismatches the POS_AMOUNT (%s)" % (balance, POS_AMOUNT))
-                #    continue
-
                 # Get ticker value
-                if "%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY) not in ticker_cache:
-                    _ticker = api.get_ticker("%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY))
-                    if _ticker.get('result', {}) is None:
-                        print("Cannot get last ticker value for %s-%s: %s" % (
-                            POS_BASE_CURRENCY, POS_CURRENCY, _ticker))
+                if "%s" % (position.get('market')) not in ticker_cache:
+                    if args.exchange == 'bittrex':
+                        r = api.get_ticker(position.get('market'))
+                        ticker_cache[position.get('market')] = r.get('result', {}).get('Last', None)
+                    elif args.exchange == 'binance':
+                        r = api.get_ticker(symbol=position.get('market'))
+                        ticker_cache[position.get('market')] = r.get('lastPrice', None)
+                    if ticker_cache[position.get('market')] is None:
+                        print("Cannot get last ticker value for %s" % (position.get('market')))
                         continue
-                    ticker_cache["%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)] = _ticker.get(
-                        'result', {}).get('Last', None)
-                    if ticker_cache["%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)] is None:
-                        print("Cannot get last ticker value for %s-%s: %s" % (
-                            POS_BASE_CURRENCY, POS_CURRENCY, _ticker))
-                        continue
-                _LAST_TICKER_VALUE = ticker_cache["%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY)]
+                    else:
+                        ticker_cache[position.get('market')] = float(ticker_cache[position.get('market')])
+
+                _LAST_TICKER_VALUE = ticker_cache[position.get('market')]
 
                 # Update the position information
                 db.positions.update_one({'_id': position.get('_id')}, {
@@ -103,8 +115,8 @@ try:
                         'expected_net_percent': expected_net_percent,
                         'last_update_at': dt.datetime.utcnow(),
                     }})
-                print(" > %s-%s Last:%s, Stop loss @%s" % (
-                    POS_BASE_CURRENCY, POS_CURRENCY, _LAST_TICKER_VALUE, STOPLOSS_LIMIT))
+                print(" > %s Last:%s, Stop loss @%s" % (
+                    position.get('market'), _LAST_TICKER_VALUE, STOPLOSS_LIMIT))
 
                 # If limits are defined and reached then we may close positions
                 closure_reason = None
@@ -113,12 +125,12 @@ try:
 
                 # Get the hell out of here, we closed the position
                 if closure_reason is not None:
-                    print(" > Closing position %s-%s %s@%s on %s @%s, expected_net:%s" % (
-                        POS_BASE_CURRENCY, POS_CURRENCY, POS_AMOUNT, POS_BUY_PRICE,
+                    print(" > Closing position %s %s@%s on %s @%s, expected_net:%s" % (
+                        position.get('market'), POS_AMOUNT, POS_BUY_PRICE,
                         closure_reason, _LAST_TICKER_VALUE, expected_net))
 
                     if not DRY_RUN:
-                        r = api.sell_limit("%s-%s" % (POS_BASE_CURRENCY, POS_CURRENCY),
+                        r = api.sell_limit("%s" % position.get('market'),
                                            quantity=POS_AMOUNT, rate=_LAST_TICKER_VALUE)
                         if not r.get('success', False):
                             raise Exception("Cannot close position: %s" % r)
