@@ -74,7 +74,7 @@ try:
                     r = api.get_order(symbol=position.get('market'), orderId=order_id)
                     if r.get('orderId', None) != order_id or 'type' not in r:
                         raise Exception("Cannot get order %s: %s" % (order_id, r))
-                    order_price = float(r.get('price', 0))
+                    order_price = float(r.get('cummulativeQuoteQty', 0))
                     order_type = '%s_%s' % (r.get('type', 'ND'), r.get('side', 'ND'))
                     order_is_open = True if r.get('status', False) in ['PARTIALLY_FILLED', 'PENDING_CANCEL'] else False
                     order_remaining_quantity = float(r.get('origQty', 0)) - float(r.get('executedQty', 0))
