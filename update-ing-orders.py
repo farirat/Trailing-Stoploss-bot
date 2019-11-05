@@ -76,7 +76,7 @@ try:
                         raise Exception("Cannot get order %s: %s" % (order_id, r))
                     order_price = float(r.get('cummulativeQuoteQty', 0))
                     order_type = '%s_%s' % (r.get('type', 'ND'), r.get('side', 'ND'))
-                    order_is_open = True if r.get('status', False) in ['PARTIALLY_FILLED', 'PENDING_CANCEL'] else False
+                    order_is_open = True if r.get('status', False) in ['PARTIALLY_FILLED', 'PENDING_CANCEL', 'NEW'] else False
                     order_remaining_quantity = float(r.get('origQty', 0)) - float(r.get('executedQty', 0))
                     order_cancel_initiated = r.get('PENDING_CANCEL', False)
                     # @TODO: Will not calculate commission with Binance because of BNB fees complexity
