@@ -1,5 +1,5 @@
 """
-This script check for open positions and apply a trailing stoploss algorithm on each one
+This script pushes trading stats to DB
 """
 import yaml
 import argparse
