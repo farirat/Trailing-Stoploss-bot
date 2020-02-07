@@ -12,7 +12,7 @@ from bittrex.bittrex import Bittrex, API_V2_0, API_V1_1
 from binance.client import Client as Binance
 from binance.enums import *
 
-parser = argparse.ArgumentParser(description='Automatic exchange trailing stoploss bot.')
+parser = argparse.ArgumentParser(description='Calculates trading stats and persist them to reports collection')
 parser.add_argument('--exchange', choices=['bittrex', 'binance'], required=True,
                     help='Exchange to use')
 parser.add_argument('--config', type=str, required=False, default="config.yml",
