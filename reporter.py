@@ -53,7 +53,7 @@ try:
     r = api.get_asset_balance(asset='USDT')
     if r.get('asset', None) != 'USDT':
         raise Exception("Cant get USDT Balance: %s" % r)
-    _balance = r['free']
+    _available = r['free']
     _locked = r['locked']
 
     # Get gain
@@ -103,7 +103,14 @@ try:
             "sum": {"$sum": "$open_cost_proceeds"}
         }}
     ]);
-    _equity = list(cursor)[0].get('sum')
+    _balance = list(cursor)[0].get('sum')
+    _equity = _balance + _gain_now
+
+    # Calculate drawdaw
+    if _equity < _balance:
+        _drawdown = 100 - (_equity*100/_balance)
+    else:
+        _drawdown = None
 
     _doc = {
         "created_at": dt.datetime.utcnow(),
@@ -114,10 +121,14 @@ try:
         "opening_positions": _opening_positions,
         "closing_positions": _closing_positions,
         "closed_positions": _closed_positions,
-        "equity": _equity,
         "balance": _balance,
+        "equity": _equity,
+        "available": _available,
         "locked": _locked,
     }
+    if _drawdown is not None:
+        _doc['drawdown'] = _drawdown
+
     db.reports.insert_one(_doc)
 except Exception as e:
     print("Error: %s" % e)
