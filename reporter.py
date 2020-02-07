@@ -15,19 +15,15 @@ from binance.enums import *
 parser = argparse.ArgumentParser(description='Automatic exchange trailing stoploss bot.')
 parser.add_argument('--exchange', choices=['bittrex', 'binance'], required=True,
                     help='Exchange to use')
-parser.add_argument('--stop-loss-percent', type=float, required=False, default=10,
-                    help='Percentage of value decrease to trigger a stoploss action')
-parser.add_argument('--dry-run', action='store_true',
-                    help='If set, no sells will be placed.')
 parser.add_argument('--config', type=str, required=False, default="config.yml",
                     help='Config file')
 
 args = parser.parse_args()
 
-STOPLOSS_PERCENTAGE = args.stop_loss_percent
-DRY_RUN = args.dry_run
-
 try:
+    if args.exchange != 'binance':
+        raise NotImplementedError("Reported is only implemeted for Binance exchanges")
+
     # Load configuration
     config = yaml.load(open(args.config, 'r'), Loader=yaml.SafeLoader)
 
@@ -53,114 +49,76 @@ try:
     else:
         raise NotImplementedError
 
-    while True:
-        ticker_cache = {}
-        for position in db.positions.find({"$and":[
-            {"status": "open"},
-            {"broker": args.exchange}
-        ]}):
-            try:
-                # Positions values
-                POS_AMOUNT = position.get('volume')
-                POS_BUY_PRICE = position.get('open_rate')
+    # Get user balance
+    r = api.get_asset_balance(asset='USDT')
+    if r.get('asset', None) != 'USDT':
+        raise Exception("Cant get USDT Balance: %s" % r)
+    _balance = r['free']
+    _locked = r['locked']
 
-                # Init. stoppers configuration
-                STOPLOSS_LIMIT = position.get('stop_loss', None)
+    # Get gain
+    cursor = db.positions.aggregate([
+        {"$match": {'status': 'closed'}},
+        {"$group": {
+            "_id" : None,
+            "sum": {"$sum": "$net"}
+        }}
+    ]);
+    _cumulated_gain = list(cursor)[0].get('sum')
 
-                # Get ticker value
-                if "%s" % (position.get('market')) not in ticker_cache:
-                    if args.exchange == 'bittrex':
-                        r = api.get_ticker(position.get('market'))
-                        ticker_cache[position.get('market')] = r.get('result', {}).get('Last', None)
-                    elif args.exchange == 'binance':
-                        r = api.get_ticker(symbol=position.get('market'))
-                        ticker_cache[position.get('market')] = r.get('lastPrice', None)
-                    if ticker_cache[position.get('market')] is None:
-                        print("Cannot get last ticker value for %s" % (position.get('market')))
-                        continue
-                    else:
-                        ticker_cache[position.get('market')] = float(ticker_cache[position.get('market')])
+    # Get gain at stop loss
+    cursor = db.positions.aggregate([
+        {"$match": {'status': 'open'}},
+        {"$project": {
+            "stop_loss_value": {"$divide": [{"$multiply": ["$stop_loss_percent", "$open_cost_proceeds"]}, 100]}
+        }},
+        {"$group": {
+            "_id": None,
+            "sum": {"$sum": "$stop_loss_value"}
+        }}
+    ]);
+    _gain_at_stop_loss = list(cursor)[0].get('sum')
 
-                _LAST_TICKER_VALUE = ticker_cache[position.get('market')]
+    # Get expected Gain value now
+    cursor = db.positions.aggregate([
+        {"$match": {'status': 'open'}},
+        {"$group": {
+            "_id": None,
+            "sum": {"$sum": "$expected_net"}
+        }}
+    ]);
+    _gain_now = list(cursor)[0].get('sum')
 
-                # Update the position information
-                db.positions.update_one({'_id': position.get('_id')}, {
-                    '$set': {
-                        'current_price': _LAST_TICKER_VALUE,
-                        'price_at': dt.datetime.utcnow(),
-                        'last_update_at': dt.datetime.utcnow(),
-                    }})
+    # Get position counts
+    _open_positions = db.positions.count_documents({'status': 'open'})
+    _opening_positions = db.positions.count_documents({'status': 'opening'})
+    _closing_positions = db.positions.count_documents({'status': 'closing'})
+    _closed_positions = db.positions.count_documents({'status': 'closed'})
 
-                # Recalculate the stoppers limits
-                # Where:
-                # - STOPLOSS will never get lower than previous iterations
-                if _LAST_TICKER_VALUE > POS_BUY_PRICE:
-                    _sl = _LAST_TICKER_VALUE - (_LAST_TICKER_VALUE * STOPLOSS_PERCENTAGE / 100)
-                    if STOPLOSS_LIMIT is None or _sl > STOPLOSS_LIMIT:
-                        STOPLOSS_LIMIT = _sl
-                else:
-                    _sl = POS_BUY_PRICE - (POS_BUY_PRICE * STOPLOSS_PERCENTAGE / 100)
-                    if STOPLOSS_LIMIT is None or _sl > STOPLOSS_LIMIT:
-                        STOPLOSS_LIMIT = _sl
+    # Get investment value
+    cursor = db.positions.aggregate([
+        {"$match": {'status': 'open'}},
+        {"$group": {
+            "_id": None,
+            "sum": {"$sum": "$open_cost_proceeds"}
+        }}
+    ]);
+    _equity = list(cursor)[0].get('sum')
 
-                # Recalculate the net
-                expected_net = (POS_AMOUNT * _LAST_TICKER_VALUE) - (POS_AMOUNT * POS_BUY_PRICE)
-                expected_net_percent = (((POS_AMOUNT * _LAST_TICKER_VALUE) * 100) / (POS_AMOUNT * POS_BUY_PRICE)) - 100
-                stop_loss_percent = (((POS_AMOUNT * STOPLOSS_LIMIT) * 100) / (POS_AMOUNT * POS_BUY_PRICE)) - 100
-                db.positions.update_one({'_id': position.get('_id')}, {
-                    '$set': {
-                        'stop_loss_percent': stop_loss_percent,
-                        'stop_loss': STOPLOSS_LIMIT,
-                        'expected_net': expected_net,
-                        'expected_net_percent': expected_net_percent,
-                        'last_update_at': dt.datetime.utcnow(),
-                    }})
-                print(" > %s Last:%s, Stop loss @%s" % (
-                    position.get('market'), _LAST_TICKER_VALUE, STOPLOSS_LIMIT))
-
-                # If limits are defined and reached then we may close positions
-                closure_reason = None
-                if STOPLOSS_LIMIT is not None and _LAST_TICKER_VALUE <= STOPLOSS_LIMIT:
-                    closure_reason = 'stoploss'
-
-                # Get the hell out of here, we closed the position
-                if closure_reason is not None:
-                    print(" > Closing position %s %s@%s on %s @%s, expected_net:%s" % (
-                        position.get('market'), POS_AMOUNT, POS_BUY_PRICE,
-                        closure_reason, _LAST_TICKER_VALUE, expected_net))
-
-                    if not DRY_RUN:
-                        if args.exchange == 'bittrex':
-                            r = api.sell_limit("%s" % position.get('market'),
-                                               quantity=POS_AMOUNT, rate=_LAST_TICKER_VALUE)
-                            if not r.get('success', False):
-                                raise Exception("Could not close position on broker: %s" % r)
-                            close_order_id = r.get('result', {}).get('uuid', None)
-                        elif args.exchange == 'binance':
-                            r = api.order_limit_sell(symbol="%s" % position.get('market'),
-                                               quantity=POS_AMOUNT, price=_LAST_TICKER_VALUE)
-                            if r.get('status', None) not in ['PARTIALLY_FILLED', 'NEW', 'FILLED'] or r.get('orderId',
-                                                                                                           None) is None:
-                                raise Exception("Could not close position on broker: %s" % r)
-                            close_order_id = r.get('orderId')
-
-                        db.positions.update_one({'_id': position.get('_id')}, {
-                            '$set': {
-                                'status': 'closing',
-                                'close_order_id': close_order_id,
-                                'closure_reason': closure_reason,
-                                'close_rate': _LAST_TICKER_VALUE,
-                                'closed_at': dt.datetime.utcnow(),
-                                'last_update_at': dt.datetime.utcnow(),
-                            }})
-                    else:
-                        print(" > DRY_RUN mode: position not closed.")
-                    continue
-            except Exception as e:
-                print("Error in position handling: %s" % e)
-                continue
-
-        time.sleep(SLEEP_SECONDS)
+    _doc = {
+        "created_at": dt.datetime.utcnow(),
+        "cumulated_gains": _cumulated_gain,
+        "gain_at_stop_loss": _gain_at_stop_loss,
+        "gain_now": _gain_now,
+        "open_positions": _open_positions,
+        "opening_positions": _opening_positions,
+        "closing_positions": _closing_positions,
+        "closed_positions": _closed_positions,
+        "equity": _equity,
+        "balance": _balance,
+        "locked": _locked,
+    }
+    db.reports.insert_one(_doc)
 except Exception as e:
     print("Error: %s" % e)
 finally:
