@@ -54,7 +54,7 @@ try:
             'closing_positions': 0,
             'closed_positions': 0
         }
-    for _o in db.market_settings.find({"trading": True}):
+    for _o in db.market_settings.find({"reporting": True}):
         markets[_o['market']] = _skeleton
     markets['other'] = _skeleton
 
