@@ -33,7 +33,13 @@ try:
     API_KEY = config.get('%s_api_key' % exchange, None)
     API_SECRET = config.get('%s_api_secret' % exchange, None)
 
+    locked_markets = {}
     while True:
+        # Clean expired locked markets
+        for locked_market, data in list(locked_markets.items()):
+            if data['locked_until'] < dt.datetime.utcnow():
+                del(locked_markets[locked_market])
+
         open_queue = []
         # Fill the open_queue
         for market in db.market_settings.find({"trading": True}):
@@ -42,7 +48,7 @@ try:
                     continue
                 entry = CronTab(market['opening_schedule'])
 
-                if entry.next(default_utc=True) < 30:
+                if entry.next(default_utc=True) < 60 and market['market'] not in locked_markets:
                     print("%s - %s hit !" % (dt.datetime.now(), market['market']))
                     open_queue.append(market)
             except Exception as e:
@@ -112,10 +118,13 @@ try:
                             'last_update_at': dt.datetime.utcnow(),
                         }
                         db.positions.insert_one(_doc)
+
+                        # Lock this market for 5 minutes to avoid multiple openings in very short time
+                        locked_markets[market['market']] = {'locked_until': dt.datetime.utcnow() + dt.timedelta(minutes=5)}
                 except Exception as e:
                     print("%s - Error in loop 2 with market %s: %s" % (dt.datetime.now(), market['market'], e))
 
-        time.sleep(30)
+        time.sleep(10)
 
 except Exception as e:
     print("%s - Error: %s" % (dt.datetime.now(), e))
