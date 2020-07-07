@@ -111,6 +111,8 @@ try:
 
     _doc = {
         "created_at": dt.datetime.utcnow(),
+        "from_datetime": _left,
+        "to_datetime": _right,
         "pairs": markets
     }
 
