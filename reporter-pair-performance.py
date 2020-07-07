@@ -46,8 +46,8 @@ try:
     markets = {}
     _skeleton = {
             'closed_last_hour': 0,
+            'cumulated_gains_last_hour': 0,
             'gain_at_stoploss': 0,
-            'cumulated_gains': 0,
             'open_positions': 0,
             'opening_positions': 0,
             'closing_positions': 0,
@@ -76,8 +76,9 @@ try:
                 "sum": {"$sum": "$stop_loss_value"}
             }}
         ]);
-        if len(list(cursor)) > 0:
-            _gain_at_stop_loss = list(cursor)[0].get('sum')
+        _res = list(cursor)
+        if len(_res) > 0:
+            _gain_at_stop_loss = _res[0].get('sum')
         else:
             _gain_at_stop_loss = 0
 
@@ -94,8 +95,8 @@ try:
 
         markets[_key] = {
             'closed_last_hour': markets[_key]['closed_last_hour'] + 1,
+            'cumulated_gains_last_hour': markets[_key]['cumulated_gains'] + position['net'],
             'gain_at_stoploss': markets[_key]['gain_at_stoploss'] + _gain_at_stop_loss,
-            'cumulated_gains': markets[_key]['cumulated_gains'] + position['net'],
             'open_positions': _open_positions,
             'opening_positions': _opening_positions,
             'closing_positions': _closing_positions,
