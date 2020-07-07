@@ -76,7 +76,10 @@ try:
                 "sum": {"$sum": "$stop_loss_value"}
             }}
         ]);
-        _gain_at_stop_loss = list(cursor)[0].get('sum')
+        if len(list(cursor)) > 0:
+            _gain_at_stop_loss = list(cursor)[0].get('sum')
+        else:
+            _gain_at_stop_loss = 0
 
         # Get position counts for this market
         _open_positions = db.positions.count_documents({'status': 'open', 'market': position['market']})
