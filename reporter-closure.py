@@ -1,5 +1,5 @@
 """
-This script pushes pair performance stats to DB
+This script pushes pair performance stats on closure to DB
 """
 import yaml
 import argparse
@@ -10,7 +10,8 @@ from pymongo import MongoClient
 from binance.client import Client as Binance
 from binance.enums import *
 
-parser = argparse.ArgumentParser(description='Calculates trading stats per pair and persist them to reports_pairperf'
+parser = argparse.ArgumentParser(description='Calculates trading stats per pair on closure and persist '
+                                             'them to reports_closure'
                                              ' collection')
 parser.add_argument('--exchange', choices=['bittrex', 'binance'], required=True,
                     help='Exchange to use')
@@ -42,7 +43,7 @@ try:
     if api.get_system_status().get("status", -1) != 0:
         raise Exception("Exchange unavailable for trading")
 
-    # Get pairperf_column_settings
+    # Get market_settings
     markets = {}
     _skeleton = {
             'closed_last_hour': 0,
@@ -133,7 +134,7 @@ try:
         "pairs": markets
     }
 
-    db.reports_pairperf.insert_one(_doc)
+    db.reports_closures.insert_one(_doc)
 except Exception as e:
     print("Error: %s" % e)
 finally:
