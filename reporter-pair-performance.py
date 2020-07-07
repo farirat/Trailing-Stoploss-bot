@@ -58,11 +58,12 @@ try:
     markets['other'] = _skeleton
 
     # Get all closed positions in last hour
-    now = dt.datetime.utcnow()
-    now = dt.datetime(2020, 1, 23, 10, 0,0)
+    _right = dt.datetime.utcnow()
+    _left = _right - dt.timedelta(minutes=60)
+    #_left = dt.datetime(2020, 1, 23, 10, 0,0)
     for position in db.positions.find({"$and": [
         {"status": "closed"},
-        {"closed_at": {"$gt": (now - dt.timedelta(minutes=60)), "$lte": now}}
+        {"closed_at": {"$gt": _left, "$lte": _right}}
     ]}):
         # Get gain at stop loss for this market
         cursor = db.positions.aggregate([
