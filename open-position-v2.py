@@ -42,7 +42,7 @@ try:
                     continue
                 entry = CronTab(market['opening_schedule'])
 
-                if entry.next(default_utc=True) < 60:
+                if entry.next(default_utc=True) < 30:
                     print("%s - %s hit !" % (dt.datetime.now(), market['market']))
                     open_queue.append(market)
             except Exception as e:
@@ -115,7 +115,7 @@ try:
                 except Exception as e:
                     print("%s - Error in loop 2 with market %s: %s" % (dt.datetime.now(), market['market'], e))
 
-        time.sleep(10)
+        time.sleep(30)
 
 except Exception as e:
     print("%s - Error: %s" % (dt.datetime.now(), e))
