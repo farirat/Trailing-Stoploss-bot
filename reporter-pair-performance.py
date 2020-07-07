@@ -93,7 +93,7 @@ try:
             _key = 'other'
 
         markets[_key] = {
-            'closed_last_hour': markets[_key]['closed_positions'] + 1,
+            'closed_last_hour': markets[_key]['closed_last_hour'] + 1,
             'gain_at_stoploss': markets[_key]['gain_at_stoploss'] + _gain_at_stop_loss,
             'cumulated_gains': markets[_key]['cumulated_gains'] + position['net'],
             'open_positions': _open_positions,
