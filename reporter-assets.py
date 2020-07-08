@@ -51,6 +51,8 @@ try:
         # Get asset
         asset_details = api.get_asset_balance(asset=_o['asset'])
         asset_details['last_updated_at'] = dt.datetime.utcnow()
+        asset_details['locked'] = float(asset_details['locked'])
+        asset_details['free'] = float(asset_details['free'])
         asset_details['locked_USDT'] = asset_details['locked'] * ticker
         asset_details['free_USDT'] = asset_details['free'] * ticker
 
@@ -62,6 +64,8 @@ try:
     # Get USDT asset details (manual)
     asset_details = api.get_asset_balance(asset='USDT')
     asset_details['last_updated_at'] = dt.datetime.utcnow()
+    asset_details['locked'] = float(asset_details['locked'])
+    asset_details['free'] = float(asset_details['free'])
     asset_details['locked_USDT'] = asset_details['locked']
     asset_details['free_USDT'] = asset_details['free']
     db.reports_assets.update_one({'asset': asset_details['asset']}, {"$set": asset_details}, upsert=True)
