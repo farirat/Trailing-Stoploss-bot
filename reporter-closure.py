@@ -94,7 +94,7 @@ try:
             ]);
             _res = list(cursor)
             if len(_res) > 0:
-                markets[_key]['gain_at_stop_loss'] = _res[0].get('sum')
+                markets[_key]['gain_at_stoploss'] = _res[0].get('sum')
 
             # Get gain for this market
             cursor = db.positions.aggregate([
@@ -208,7 +208,7 @@ try:
             'closed_last_hour': markets[_key]['closed_last_hour'] + 1,
             'cumulated_gain_last_hour': markets[_key]['cumulated_gain_last_hour'] + position['net'],
 
-            'gain_at_stoploss': markets[_key]['gain_at_stop_loss'],
+            'gain_at_stoploss': markets[_key]['gain_at_stoploss'],
             'open_positions': markets[_key]['open_positions'],
             'opening_positions': markets[_key]['opening_positions'],
             'closing_positions': markets[_key]['closing_positions'],
