@@ -89,7 +89,7 @@ try:
                         r = api.create_order(
                             symbol=market['market'],
                             side=SIDE_BUY,
-                            type=ORDER_TYPE_LIMIT,
+                            type=ORDER_TYPE_MARKET,
                             timeInForce=TIME_IN_FORCE_GTC,
                             quantity=_quantity,
                             price=_rate)
