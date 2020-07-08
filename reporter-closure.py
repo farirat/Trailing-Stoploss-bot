@@ -226,8 +226,7 @@ try:
     # Do not store zero values
     # Cleansing:
     for market, data in list(markets.items()):
-        if (markets[market]['closed_last_hour'] == 0 and markets[market]['open_positions'] == 0
-            and markets[market]['opening_positions'] == 0 and markets[market]['closing_positions'] == 0):
+        if markets[market]['gain_at_stoploss'] is None:
             del(markets[market])
 
     _doc = {
