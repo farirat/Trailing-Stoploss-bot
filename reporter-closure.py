@@ -80,7 +80,7 @@ try:
             _key = 'other'
 
         # One time calculation per market
-        if markets[_key]['gain_at_stop_loss'] is None:
+        if markets[_key]['gain_at_stoploss'] is None:
             # Get gain at stop loss for this market
             cursor = db.positions.aggregate([
                 {"$match": {'status': 'open', 'market': position['market']}},
