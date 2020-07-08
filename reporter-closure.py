@@ -2,6 +2,7 @@
 This script pushes pair performance stats on closure to DB
 """
 import yaml
+import copy
 import argparse
 import datetime as dt
 import time
@@ -63,13 +64,13 @@ try:
         'cumulated_gain': None,
     }
     for _o in db.market_settings.find({"reporting": True}):
-        markets[_o['market']] = _skeleton
-    markets['other'] = _skeleton
+        markets[_o['market']] = copy.copy(_skeleton)
+    markets['other'] = copy.copy(_skeleton)
 
     # Get all closed positions in last hour
     right = dt.datetime.utcnow()
     left = right - dt.timedelta(minutes=60)
-    #_left = dt.datetime(2020, 1, 23, 10, 0,0)
+    #left = dt.datetime(2020, 1, 23, 10, 0,0)
     for position in db.positions.find({"$and": [
         {"status": "closed"},
         {"closed_at": {"$gt": left, "$lte": right}}
