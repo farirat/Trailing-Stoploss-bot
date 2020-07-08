@@ -68,7 +68,7 @@ try:
 
     # Can we cancel ?
     print("# Please confirm canceling order #%s ? (y/n)" % position['open_order_id'])
-    choice = input()
+    choice = str(input())
     if choice.lower() != 'y':
         raise Exception("Cancelled")
 
