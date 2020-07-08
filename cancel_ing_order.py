@@ -68,8 +68,8 @@ try:
 
     # Can we cancel ?
     print("# Please confirm canceling order #%s ? (y/n)" % position['open_order_id'])
-    choice = input().lower()
-    if choice != 'y':
+    choice = input()
+    if choice.lower() != 'y':
         raise Exception("Cancelled")
 
     # If position were in 'opening' status, then simply clear it from db
