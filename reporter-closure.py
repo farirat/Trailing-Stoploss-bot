@@ -48,18 +48,19 @@ try:
     _skeleton = {
         'closed_last_hour': 0,
         'cumulated_gain_last_hour': 0,
-        'gain_at_stoploss': 0,
-        'open_positions': 0,
-        'opening_positions': 0,
-        'closing_positions': 0,
-        'closed_positions': 0,
-        '24h_gain': 0,
-        '1w_gain': 0,
-        '1m_gain': 0,
-        '3m_gain': 0,
-        '6m_gain': 0,
-        '1y_gain': 0,
-        'cumulated_gain': 0,
+
+        'gain_at_stoploss': None,
+        'open_positions': None,
+        'opening_positions': None,
+        'closing_positions': None,
+        'closed_positions': None,
+        '24h_gain': None,
+        '1w_gain': None,
+        '1m_gain': None,
+        '3m_gain': None,
+        '6m_gain': None,
+        '1y_gain': None,
+        'cumulated_gain': None,
     }
     for _o in db.market_settings.find({"reporting": True}):
         markets[_o['market']] = _skeleton
@@ -73,165 +74,152 @@ try:
         {"status": "closed"},
         {"closed_at": {"$gt": left, "$lte": right}}
     ]}):
-        # Get gain at stop loss for this market
-        cursor = db.positions.aggregate([
-            {"$match": {'status': 'open', 'market': position['market']}},
-            {"$project": {
-                "stop_loss_value": {"$divide": [{"$multiply": ["$stop_loss_percent", "$open_cost_proceeds"]}, 100]}
-            }},
-            {"$group": {
-                "_id": None,
-                "sum": {"$sum": "$stop_loss_value"}
-            }}
-        ]);
-        _res = list(cursor)
-        if len(_res) > 0:
-            _gain_at_stop_loss = _res[0].get('sum')
-        else:
-            _gain_at_stop_loss = 0
-
-        # Get gain for this market
-        cursor = db.positions.aggregate([
-            {"$match": {'status': 'closed', 'market': position['market']}},
-            {"$group": {
-                "_id": None,
-                "sum": {"$sum": "$net"}
-            }}
-        ]);
-        _res = list(cursor)
-        if len(_res) > 0:
-            _cumulated_gain = _res[0].get('sum')
-        else:
-            _cumulated_gain = 0
-
-        # Get 24h gain for this market
-        _left = right - dt.timedelta(hours=24)
-        cursor = db.positions.aggregate([
-            {"$match": {'status': 'closed',
-                        'market': position['market'],
-                        'closed_at': {"$gt": _left, "$lte": right}}},
-            {"$group": {
-                "_id": None,
-                "sum": {"$sum": "$net"}
-            }}
-        ]);
-        _res = list(cursor)
-        if len(_res) > 0:
-            _24h_gain = _res[0].get('sum')
-        else:
-            _24h_gain = 0
-
-        # Get 1w gain for this market
-        _left = right - dt.timedelta(days=7)
-        cursor = db.positions.aggregate([
-            {"$match": {'status': 'closed',
-                        'market': position['market'],
-                        'closed_at': {"$gt": _left, "$lte": right}}},
-            {"$group": {
-                "_id": None,
-                "sum": {"$sum": "$net"}
-            }}
-        ]);
-        _res = list(cursor)
-        if len(_res) > 0:
-            _1w_gain = _res[0].get('sum')
-        else:
-            _1w_gain = 0
-
-        # Get 1m gain for this market
-        _left = right - dt.timedelta(days=31)
-        cursor = db.positions.aggregate([
-            {"$match": {'status': 'closed',
-                        'market': position['market'],
-                        'closed_at': {"$gt": _left, "$lte": right}}},
-            {"$group": {
-                "_id": None,
-                "sum": {"$sum": "$net"}
-            }}
-        ]);
-        _res = list(cursor)
-        if len(_res) > 0:
-            _1m_gain = _res[0].get('sum')
-        else:
-            _1m_gain = 0
-
-        # Get 3m gain for this market
-        _left = right - dt.timedelta(days=93)
-        cursor = db.positions.aggregate([
-            {"$match": {'status': 'closed',
-                        'market': position['market'],
-                        'closed_at': {"$gt": _left, "$lte": right}}},
-            {"$group": {
-                "_id": None,
-                "sum": {"$sum": "$net"}
-            }}
-        ]);
-        _res = list(cursor)
-        if len(_res) > 0:
-            _3m_gain = _res[0].get('sum')
-        else:
-            _3m_gain = 0
-
-        # Get 6m gain for this market
-        _left = right - dt.timedelta(days=186)
-        cursor = db.positions.aggregate([
-            {"$match": {'status': 'closed',
-                        'market': position['market'],
-                        'closed_at': {"$gt": _left, "$lte": right}}},
-            {"$group": {
-                "_id": None,
-                "sum": {"$sum": "$net"}
-            }}
-        ]);
-        _res = list(cursor)
-        if len(_res) > 0:
-            _6m_gain = _res[0].get('sum')
-        else:
-            _6m_gain = 0
-
-        # Get 1y gain for this market
-        _left = right - dt.timedelta(days=365)
-        cursor = db.positions.aggregate([
-            {"$match": {'status': 'closed',
-                        'market': position['market'],
-                        'closed_at': {"$gt": _left, "$lte": right}}},
-            {"$group": {
-                "_id": None,
-                "sum": {"$sum": "$net"}
-            }}
-        ]);
-        _res = list(cursor)
-        if len(_res) > 0:
-            _1y_gain = _res[0].get('sum')
-        else:
-            _1y_gain = 0
-
-        # Get position counts for this market
-        _open_positions = db.positions.count_documents({'status': 'open', 'market': position['market']})
-        _opening_positions = db.positions.count_documents({'status': 'opening', 'market': position['market']})
-        _closing_positions = db.positions.count_documents({'status': 'closing', 'market': position['market']})
-        _closed_positions = db.positions.count_documents({'status': 'closed', 'market': position['market']})
-
         if position['market'] in markets:
             _key = position['market']
         else:
             _key = 'other'
 
+        # One time calculation per market
+        if markets[_key]['gain_at_stop_loss'] is None:
+            # Get gain at stop loss for this market
+            cursor = db.positions.aggregate([
+                {"$match": {'status': 'open', 'market': position['market']}},
+                {"$project": {
+                    "stop_loss_value": {"$divide": [{"$multiply": ["$stop_loss_percent", "$open_cost_proceeds"]}, 100]}
+                }},
+                {"$group": {
+                    "_id": None,
+                    "sum": {"$sum": "$stop_loss_value"}
+                }}
+            ]);
+            _res = list(cursor)
+            if len(_res) > 0:
+                markets[_key]['gain_at_stop_loss'] = _res[0].get('sum')
+
+            # Get gain for this market
+            cursor = db.positions.aggregate([
+                {"$match": {'status': 'closed', 'market': position['market']}},
+                {"$group": {
+                    "_id": None,
+                    "sum": {"$sum": "$net"}
+                }}
+            ]);
+            _res = list(cursor)
+            if len(_res) > 0:
+                markets[_key]['cumulated_gain'] = _res[0].get('sum')
+
+            # Get 24h gain for this market
+            _left = right - dt.timedelta(hours=24)
+            cursor = db.positions.aggregate([
+                {"$match": {'status': 'closed',
+                            'market': position['market'],
+                            'closed_at': {"$gt": _left, "$lte": right}}},
+                {"$group": {
+                    "_id": None,
+                    "sum": {"$sum": "$net"}
+                }}
+            ]);
+            _res = list(cursor)
+            if len(_res) > 0:
+                markets[_key]['24h_gain'] = _res[0].get('sum')
+
+            # Get 1w gain for this market
+            _left = right - dt.timedelta(days=7)
+            cursor = db.positions.aggregate([
+                {"$match": {'status': 'closed',
+                            'market': position['market'],
+                            'closed_at': {"$gt": _left, "$lte": right}}},
+                {"$group": {
+                    "_id": None,
+                    "sum": {"$sum": "$net"}
+                }}
+            ]);
+            _res = list(cursor)
+            if len(_res) > 0:
+                markets[_key]['1w_gain'] = _res[0].get('sum')
+
+            # Get 1m gain for this market
+            _left = right - dt.timedelta(days=31)
+            cursor = db.positions.aggregate([
+                {"$match": {'status': 'closed',
+                            'market': position['market'],
+                            'closed_at': {"$gt": _left, "$lte": right}}},
+                {"$group": {
+                    "_id": None,
+                    "sum": {"$sum": "$net"}
+                }}
+            ]);
+            _res = list(cursor)
+            if len(_res) > 0:
+                markets[_key]['1m_gain'] = _res[0].get('sum')
+
+            # Get 3m gain for this market
+            _left = right - dt.timedelta(days=93)
+            cursor = db.positions.aggregate([
+                {"$match": {'status': 'closed',
+                            'market': position['market'],
+                            'closed_at': {"$gt": _left, "$lte": right}}},
+                {"$group": {
+                    "_id": None,
+                    "sum": {"$sum": "$net"}
+                }}
+            ]);
+            _res = list(cursor)
+            if len(_res) > 0:
+                markets[_key]['3m_gain'] = _res[0].get('sum')
+
+            # Get 6m gain for this market
+            _left = right - dt.timedelta(days=186)
+            cursor = db.positions.aggregate([
+                {"$match": {'status': 'closed',
+                            'market': position['market'],
+                            'closed_at': {"$gt": _left, "$lte": right}}},
+                {"$group": {
+                    "_id": None,
+                    "sum": {"$sum": "$net"}
+                }}
+            ]);
+            _res = list(cursor)
+            if len(_res) > 0:
+                markets[_key]['6m_gain'] = _res[0].get('sum')
+
+            # Get 1y gain for this market
+            _left = right - dt.timedelta(days=365)
+            cursor = db.positions.aggregate([
+                {"$match": {'status': 'closed',
+                            'market': position['market'],
+                            'closed_at': {"$gt": _left, "$lte": right}}},
+                {"$group": {
+                    "_id": None,
+                    "sum": {"$sum": "$net"}
+                }}
+            ]);
+            _res = list(cursor)
+            if len(_res) > 0:
+                markets[_key]['1y_gain'] = _res[0].get('sum')
+
+            # Get position counts for this market
+            markets[_key]['open_positions'] = db.positions.count_documents({'status': 'open', 'market': position['market']})
+            markets[_key]['opening_positions'] = db.positions.count_documents({'status': 'opening', 'market': position['market']})
+            markets[_key]['closing_positions'] = db.positions.count_documents({'status': 'closing', 'market': position['market']})
+            markets[_key]['closed_positions'] = db.positions.count_documents({'status': 'closed', 'market': position['market']})
+
         markets[_key] = {
             'closed_last_hour': markets[_key]['closed_last_hour'] + 1,
             'cumulated_gain_last_hour': markets[_key]['cumulated_gain_last_hour'] + position['net'],
-            'gain_at_stoploss': markets[_key]['gain_at_stoploss'] + _gain_at_stop_loss,
-            'open_positions': _open_positions,
-            'opening_positions': _opening_positions,
-            'closing_positions': _closing_positions,
-            'closed_positions': _closed_positions,
-            '24h_gain': _24h_gain,
-            '1w_gain': _1w_gain,
-            '1m_gain': _1m_gain,
-            '3m_gain': _3m_gain,
-            '6m_gain': _6m_gain,
-            '1y_gain': _1y_gain,
-            'cumulated_gain': markets[_key]['cumulated_gain'] + _cumulated_gain,
+
+            'gain_at_stoploss': markets[_key]['gain_at_stop_loss'],
+            'open_positions': markets[_key]['open_positions'],
+            'opening_positions': markets[_key]['opening_positions'],
+            'closing_positions': markets[_key]['closing_positions'],
+            'closed_positions': markets[_key]['closed_positions'],
+            '24h_gain': markets[_key]['24h_gain'],
+            '1w_gain': markets[_key]['1w_gain'],
+            '1m_gain': markets[_key]['1m_gain'],
+            '3m_gain': markets[_key]['3m_gain'],
+            '6m_gain': markets[_key]['6m_gain'],
+            '1y_gain': markets[_key]['1y_gain'],
+            'cumulated_gain': markets[_key]['cumulated_gain'],
         }
 
     # Do not store zero values
