@@ -47,16 +47,19 @@ try:
     markets = {}
     _skeleton = {
         'closed_last_hour': 0,
-        'cumulated_gains_last_hour': 0,
+        'cumulated_gain_last_hour': 0,
         'gain_at_stoploss': 0,
-        'cumulated_gains': 0,
         'open_positions': 0,
         'opening_positions': 0,
         'closing_positions': 0,
         'closed_positions': 0,
         '24h_gain': 0,
         '1w_gain': 0,
-        '1m_gain': 0
+        '1m_gain': 0,
+        '3m_gain': 0,
+        '6m_gain': 0,
+        '1y_gain': 0,
+        'cumulated_gain': 0,
     }
     for _o in db.market_settings.find({"reporting": True}):
         markets[_o['market']] = _skeleton
@@ -152,6 +155,57 @@ try:
         else:
             _1m_gain = 0
 
+        # Get 3m gain for this market
+        _left = right - dt.timedelta(days=93)
+        cursor = db.positions.aggregate([
+            {"$match": {'status': 'closed',
+                        'market': position['market'],
+                        'closed_at': {"$gt": _left, "$lte": right}}},
+            {"$group": {
+                "_id": None,
+                "sum": {"$sum": "$net"}
+            }}
+        ]);
+        _res = list(cursor)
+        if len(_res) > 0:
+            _3m_gain = _res[0].get('sum')
+        else:
+            _3m_gain = 0
+
+        # Get 6m gain for this market
+        _left = right - dt.timedelta(days=186)
+        cursor = db.positions.aggregate([
+            {"$match": {'status': 'closed',
+                        'market': position['market'],
+                        'closed_at': {"$gt": _left, "$lte": right}}},
+            {"$group": {
+                "_id": None,
+                "sum": {"$sum": "$net"}
+            }}
+        ]);
+        _res = list(cursor)
+        if len(_res) > 0:
+            _6m_gain = _res[0].get('sum')
+        else:
+            _6m_gain = 0
+
+        # Get 1y gain for this market
+        _left = right - dt.timedelta(days=365)
+        cursor = db.positions.aggregate([
+            {"$match": {'status': 'closed',
+                        'market': position['market'],
+                        'closed_at': {"$gt": _left, "$lte": right}}},
+            {"$group": {
+                "_id": None,
+                "sum": {"$sum": "$net"}
+            }}
+        ]);
+        _res = list(cursor)
+        if len(_res) > 0:
+            _1y_gain = _res[0].get('sum')
+        else:
+            _1y_gain = 0
+
         # Get position counts for this market
         _open_positions = db.positions.count_documents({'status': 'open', 'market': position['market']})
         _opening_positions = db.positions.count_documents({'status': 'opening', 'market': position['market']})
@@ -165,9 +219,8 @@ try:
 
         markets[_key] = {
             'closed_last_hour': markets[_key]['closed_last_hour'] + 1,
-            'cumulated_gains_last_hour': markets[_key]['cumulated_gains_last_hour'] + position['net'],
+            'cumulated_gain_last_hour': markets[_key]['cumulated_gain_last_hour'] + position['net'],
             'gain_at_stoploss': markets[_key]['gain_at_stoploss'] + _gain_at_stop_loss,
-            'cumulated_gains': markets[_key]['cumulated_gains'] + _cumulated_gain,
             'open_positions': _open_positions,
             'opening_positions': _opening_positions,
             'closing_positions': _closing_positions,
@@ -175,6 +228,10 @@ try:
             '24h_gain': _24h_gain,
             '1w_gain': _1w_gain,
             '1m_gain': _1m_gain,
+            '3m_gain': _3m_gain,
+            '6m_gain': _6m_gain,
+            '1y_gain': _1y_gain,
+            'cumulated_gain': markets[_key]['cumulated_gain'] + _cumulated_gain,
         }
 
     # Do not store zero values
