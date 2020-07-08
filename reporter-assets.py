@@ -42,15 +42,29 @@ try:
     if api.get_system_status().get("status", -1) != 0:
         raise Exception("Exchange unavailable for trading")
 
-    # Get asset details
+    # Get asset details based on market_settings
     for _o in db.market_settings.find({"$or": [{"reporting": True}, {"trading": True}]}):
+        # Get 24h ticker
+        r = api.get_ticker(symbol=_o['market'])
+        ticker = float(r.get('lastPrice', None))
+
+        # Get asset
         asset_details = api.get_asset_balance(asset=_o['asset'])
         asset_details['last_updated_at'] = dt.datetime.utcnow()
+        asset_details['locked_USDT'] = asset_details['locked'] * ticker
+        asset_details['free_USDT'] = asset_details['free'] * ticker
 
         db.reports_assets.update_one({'asset': asset_details['asset']}, {"$set": asset_details}, upsert=True)
 
         # Slow down to avoid getting banned from the api
         time.sleep(SLEEP_SECONDS)
+
+    # Get USDT asset details (manual)
+    asset_details = api.get_asset_balance(asset='USDT')
+    asset_details['last_updated_at'] = dt.datetime.utcnow()
+    asset_details['locked_USDT'] = asset_details['locked']
+    asset_details['free_USDT'] = asset_details['free']
+    db.reports_assets.update_one({'asset': asset_details['asset']}, {"$set": asset_details}, upsert=True)
 except Exception as e:
     print("Error: %s" % e)
 finally:
