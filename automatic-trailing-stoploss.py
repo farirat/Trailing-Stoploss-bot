@@ -129,7 +129,7 @@ try:
                         position.get('market'), POS_AMOUNT, POS_BUY_PRICE,
                         closure_reason, _LAST_TICKER_VALUE, expected_net))
 
-                    if not DRY_RUN:
+                    if not DRY_RUN and not position.get('hodl', False):
                         if args.exchange == 'bittrex':
                             r = api.sell_limit("%s" % position.get('market'),
                                                quantity=POS_AMOUNT, rate=_LAST_TICKER_VALUE)
@@ -154,7 +154,7 @@ try:
                                 'last_update_at': dt.datetime.utcnow(),
                             }})
                     else:
-                        print(" > DRY_RUN mode: position not closed.")
+                        print(" > DRY_RUN mode: position not closed (hodl:%s)." % position.get('hodl', False))
                     continue
             except Exception as e:
                 print("Error in position handling: %s" % e)

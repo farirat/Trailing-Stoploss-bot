@@ -117,6 +117,11 @@ try:
                             "price_at": dt.datetime.utcnow(),
                             'last_update_at': dt.datetime.utcnow(),
                         }
+
+                        # Shall we hodl this position ?
+                        if market.get('hodl', False):
+                            _doc['hodl'] = True
+                        
                         db.positions.insert_one(_doc)
 
                         # Lock this market for 5 minutes to avoid multiple openings in very short time
