@@ -31,7 +31,7 @@ try:
     # Exchange API keys
     API_KEY = config.get('%s_api_key' % args.exchange, None)
     API_SECRET = config.get('%s_api_secret' % args.exchange, None)
-    SLEEP_SECONDS = 30
+    SLEEP_SECONDS = 5
 
     # Initialize exchange api
     if args.exchange == 'bittrex':
