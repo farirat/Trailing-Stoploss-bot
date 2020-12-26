@@ -31,7 +31,7 @@ try:
     # Initialize mongo api
     mongo = MongoClient(config.get('db', None))
     mongo.server_info()
-    db = mongo[self.config.get('db_name', 'dumbot')]
+    db = mongo[config.get('db_name', 'dumbot')]
 
     # Exchange API keys
     API_KEY = config.get('%s_api_key' % args.exchange, None)
