@@ -1,5 +1,6 @@
 # MongoDB connection
 db: "mongodb://localhost:27017/"
+db_name: "dumbot"
 
 # Broker configuration
 bittrex_api_key: "qhsdkjqsbdjqhdbqkjsdbqksjdn"

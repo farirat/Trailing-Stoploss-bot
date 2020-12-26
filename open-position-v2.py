@@ -27,7 +27,7 @@ try:
     # Initialize mongo api
     mongo = MongoClient(config.get('db', None))
     mongo.server_info()
-    db = mongo.dumbot
+    db = mongo[self.config.get('db_name', 'dumbot')]
 
     # Exchange API keys
     API_KEY = config.get('%s_api_key' % exchange, None)
@@ -121,7 +121,7 @@ try:
                         # Shall we hodl this position ?
                         if market.get('hodl', False):
                             _doc['hodl'] = True
-                        
+
                         db.positions.insert_one(_doc)
 
                         # Lock this market for 5 minutes to avoid multiple openings in very short time
