@@ -2,6 +2,7 @@
 This script check for open positions and apply a trailing stoploss algorithm on each one
 """
 import yaml
+import math
 import argparse
 import datetime as dt
 import time
