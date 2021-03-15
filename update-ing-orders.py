@@ -140,10 +140,18 @@ try:
                                     'last_update_at': dt.datetime.utcnow(),
                                 }})
                         else:
+                            # Get the volume from executed trades
+                            trades = api.get_my_trades(symbol=position.get('market'), orderId=position.get('market'))
+                            _volume = position.get('volume')
+                            for trade in trades:
+                                _volume -= trade.get('commission', 0)
+
                             # If we're opening then update the open_costs
                             _open_cost_proceeds = order_price + order_commission_paid
                             db.positions.update_one({'_id': position.get('_id')}, {
                                 '$set': {
+                                    'requested_volume': position.get('volume'),
+                                    'volume': _volume,
                                     'fully_open_at': dt.datetime.utcnow(),
                                     'open_commission': order_commission_paid,
                                     'open_cost': order_price,
