@@ -141,7 +141,8 @@ try:
                                 }})
                         else:
                             # Get the volume from executed trades
-                            trades = api.get_my_trades(symbol=position.get('market'), orderId=position.get('market'))
+                            trades = api.get_my_trades(symbol=position.get('market'),
+                                                       orderId=position.get('open_order_id'))
                             _volume = position.get('volume')
                             for trade in trades:
                                 _volume -= trade.get('commission', 0)
