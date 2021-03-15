@@ -53,6 +53,17 @@ try:
     else:
         raise NotImplementedError
 
+    exchange_symbols = {}
+    r = api.get_exchange_info()
+    for symbol in r.get('symbols'):
+        # Rebuild the filters array
+        filters = {}
+        for filter in symbol['filters']:
+            filters[filter['filterType']] = filter
+        symbol['filters'] = filters
+
+        exchange_symbols[symbol.get('symbol')] = symbol
+
     while True:
         ticker_cache = {}
         for position in db.positions.find({"$and":[
@@ -137,8 +148,14 @@ try:
                                 raise Exception("Could not close position on broker: %s" % r)
                             close_order_id = r.get('result', {}).get('uuid', None)
                         elif args.exchange == 'binance':
+                            step_size = float(
+                                exchange_symbols.get(position.get('market'), {}).get('filters', {}).get('LOT_SIZE', {}).get(
+                                    'stepSize', 0.00000001))
+                            precision = int(round(-math.log(step_size, 10), 0))
+                            _stepped_pos_amount = round(POS_AMOUNT, precision)
+
                             r = api.order_limit_sell(symbol="%s" % position.get('market'),
-                                               quantity=POS_AMOUNT, price=_LAST_TICKER_VALUE)
+                                               quantity=_stepped_pos_amount, price=_LAST_TICKER_VALUE)
                             if r.get('status', None) not in ['PARTIALLY_FILLED', 'NEW', 'FILLED'] or r.get('orderId',
                                                                                                            None) is None:
                                 raise Exception("Could not close position on broker: %s" % r)

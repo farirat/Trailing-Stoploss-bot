@@ -45,6 +45,21 @@ try:
     else:
         raise NotImplementedError
 
+    # Get exchange_info
+    exchange_info = api.get_exchange_info()
+
+    # Build exchange symbols configuration
+    exchange_symbols = {}
+    r = api.get_exchange_info()
+    for symbol in exchange_info.get('symbols'):
+        # Rebuild the filters array
+        filters = {}
+        for filter in symbol['filters']:
+            filters[filter['filterType']] = filter
+        symbol['filters'] = filters
+
+        exchange_symbols[symbol.get('symbol')] = symbol
+
     while True:
         ticker_cache = {}
         for position in db.positions.find({"$and":[
