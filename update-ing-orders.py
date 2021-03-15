@@ -145,7 +145,7 @@ try:
                                                        orderId=position.get('open_order_id'))
                             _volume = position.get('volume')
                             for trade in trades:
-                                _volume -= trade.get('commission', 0)
+                                _volume -= float(trade.get('commission', 0))
 
                             # If we're opening then update the open_costs
                             _open_cost_proceeds = order_price + order_commission_paid
