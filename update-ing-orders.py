@@ -152,7 +152,7 @@ try:
                             db.positions.update_one({'_id': position.get('_id')}, {
                                 '$set': {
                                     'requested_volume': position.get('volume'),
-                                    'volume': _volume,
+                                    'volume': round(_volume, 8),
                                     'fully_open_at': dt.datetime.utcnow(),
                                     'open_commission': order_commission_paid,
                                     'open_cost': order_price,
