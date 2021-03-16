@@ -3,6 +3,7 @@ This script check for open positions and apply a trailing stoploss algorithm on 
 """
 import yaml
 import math
+from decimal import Decimal, ROUND_DOWN
 import argparse
 import datetime as dt
 import time
@@ -152,8 +153,8 @@ try:
                             step_size = float(
                                 exchange_symbols.get(position.get('market'), {}).get('filters', {}).get('LOT_SIZE', {}).get(
                                     'stepSize', 0.00000001))
-                            precision = int(round(-math.log(step_size, 10), 0))
-                            _stepped_pos_amount = round(POS_AMOUNT, precision)
+                            _stepped_pos_amount = Decimal(POS_AMOUNT).quantize(
+                                Decimal('%s' % step_size), rounding=ROUND_DOWN)
 
                             r = api.order_limit_sell(symbol="%s" % position.get('market'),
                                                quantity=_stepped_pos_amount, price=_LAST_TICKER_VALUE)
