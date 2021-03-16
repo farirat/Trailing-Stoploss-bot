@@ -3,7 +3,6 @@ This script check for open positions and apply a trailing stoploss algorithm on 
 """
 import yaml
 import math
-from decimal import Decimal, ROUND_DOWN
 import argparse
 import datetime as dt
 import time
@@ -158,9 +157,9 @@ try:
                                 raise Exception("Could not close position on broker: %s" % r)
                             close_order_id = r.get('result', {}).get('uuid', None)
                         elif args.exchange == 'binance':
-                            step_size = float(
-                                exchange_symbols.get(position.get('market'), {}).get('filters', {}).get('LOT_SIZE', {}).get(
-                                    'stepSize', 0.00000001))
+                            step_size = exchange_symbols.get(
+                                position.get('market'), {}).get('filters', {}).get(
+                                'LOT_SIZE', {}).get('stepSize', 0.00000001)
                             _stepped_pos_amount = format_value(POS_AMOUNT, step_size)
 
                             r = api.order_limit_sell(symbol="%s" % position.get('market'),
