@@ -153,8 +153,11 @@ try:
                             step_size = float(
                                 exchange_symbols.get(position.get('market'), {}).get('filters', {}).get('LOT_SIZE', {}).get(
                                     'stepSize', 0.00000001))
-                            _stepped_pos_amount = Decimal(POS_AMOUNT).quantize(
-                                Decimal('%s' % step_size), rounding=ROUND_DOWN)
+                            if step_size < 0:
+                                _stepped_pos_amount = Decimal(POS_AMOUNT).quantize(
+                                    Decimal('%s' % step_size), rounding=ROUND_DOWN)
+                            else:
+                                _stepped_pos_amount = math.floor(POS_AMOUNT)
 
                             r = api.order_limit_sell(symbol="%s" % position.get('market'),
                                                quantity=_stepped_pos_amount, price=_LAST_TICKER_VALUE)
