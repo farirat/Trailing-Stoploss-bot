@@ -29,6 +29,14 @@ args = parser.parse_args()
 STOPLOSS_PERCENTAGE = args.stop_loss_percent
 DRY_RUN = args.dry_run
 
+def step_size_to_precision(ss):
+    return max(ss.find('1'), 1) - 1
+
+def format_value(val, step_size):
+    digits = step_size_to_precision('%s' % step_size)
+    val *= 10 ** digits
+    return '{1:.{0}f}'.format(digits, math.floor(val) / 10 ** digits)
+
 try:
     # Load configuration
     config = yaml.load(open(args.config, 'r'), Loader=yaml.SafeLoader)
@@ -153,11 +161,7 @@ try:
                             step_size = float(
                                 exchange_symbols.get(position.get('market'), {}).get('filters', {}).get('LOT_SIZE', {}).get(
                                     'stepSize', 0.00000001))
-                            if step_size < 0:
-                                _stepped_pos_amount = Decimal(POS_AMOUNT).quantize(
-                                    Decimal('%s' % step_size), rounding=ROUND_DOWN)
-                            else:
-                                _stepped_pos_amount = math.floor(POS_AMOUNT)
+                            _stepped_pos_amount = format_value(POS_AMOUNT, step_size)
 
                             r = api.order_limit_sell(symbol="%s" % position.get('market'),
                                                quantity=_stepped_pos_amount, price=_LAST_TICKER_VALUE)
